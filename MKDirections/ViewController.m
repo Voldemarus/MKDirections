@@ -185,12 +185,16 @@ MKRoute *routeDetails;
         }
     }
     free(routeCoordinates);
-    
-    MinDistanceFromGuidanceInKM =
-    MIN(
-        [self lineSegmentDistanceFromOrigin:ulv.annotation.coordinate onLineSegmentPointA:prevPoint pointB:pointWithMinDistance],
-        [self lineSegmentDistanceFromOrigin:ulv.annotation.coordinate onLineSegmentPointA:pointWithMinDistance pointB:nextPoint]);
-    
+	
+	double distanceFromClosestRouteSegment = [self distanceOfUser:ulv.annotation.coordinate fromSegmentStart:prevPoint toSegmentEnd:pointWithMinDistance];
+	double distanceFromNextSegment = [self distanceOfUser:ulv.annotation.coordinate fromSegmentStart:pointWithMinDistance toSegmentEnd:nextPoint];
+	
+	MinDistanceFromGuidanceInKM = MIN(distanceFromClosestRouteSegment, distanceFromNextSegment);
+	
+//	MIN(
+//        [self lineSegmentDistanceFromOrigin:ulv.annotation.coordinate onLineSegmentPointA:prevPoint pointB:pointWithMinDistance],
+//        [self lineSegmentDistanceFromOrigin:ulv.annotation.coordinate onLineSegmentPointA:pointWithMinDistance pointB:nextPoint]);
+	
     if (MinDistanceFromGuidanceInKM > 1.2*MIN_DISTANCE) {
      
         return NO;
@@ -201,6 +205,54 @@ MKRoute *routeDetails;
     }
      
 }
+
+//
+// Returns distance between user locaton and route segment
+//
+
+- (double) distanceOfUser:(CLLocationCoordinate2D)userPoint fromSegmentStart:(CLLocationCoordinate2D)startPoint toSegmentEnd:(CLLocationCoordinate2D)endPoint
+{
+	CLLocation *pointA = [[CLLocation alloc] initWithLatitude:userPoint.latitude longitude:userPoint.longitude];
+	CLLocation *pointB = [[CLLocation alloc] initWithLatitude:startPoint.latitude longitude:startPoint.longitude];
+	CLLocation *pointC = [[CLLocation alloc] initWithLatitude:endPoint.latitude longitude:endPoint.longitude];
+	
+	CLLocationDistance segmentLength = [pointC distanceFromLocation:pointB];
+	double userFromStartLength = [pointA distanceFromLocation:pointB];
+	double userFromEndLength = [pointA distanceFromLocation:pointC];
+	
+	return [self distanceForTrinagleA:segmentLength
+									B:userFromStartLength
+								 andC:userFromEndLength];
+}
+
+
+//
+// A - length of the route segment, B and C - length to the atual user position
+// from the start and end of the route segment. Method calculates deviation of
+// current user' position from the route segment.
+//
+
+- (double) distanceForTrinagleA:(double)aLength B:(double)bLength andC:(double)cLength
+{
+	// if segment length is lesser than minimal length, suitablr
+	// to solve triangle equation, just calculate distance from the start
+	// of this segment, which is a bLength
+	
+	if (aLength < MIN_DISTANCE) {
+		return bLength;
+	}
+	//
+	// Calculate deviation as a height from user's position point to the
+	// line, which depicts route segment. In fact, we calculate height
+	// in the triangle, given by three lengths.
+	//
+	double p = (aLength + bLength + cLength) * 0.5;
+	double tmp = p * (p - aLength) * (p - bLength) * (p - cLength);
+	tmp = 2 / aLength * sqrt(tmp);
+	
+	return tmp;
+}
+
 
 -(double)distanceBetweentwoPoints:(double)Nlat longitude:(double)Nlon Old:(double)Olat longitude:(double)Olon  {
     
@@ -217,6 +269,7 @@ MKRoute *routeDetails;
     return dist * 1.609344;
 }
 
+/*
 - (CGFloat)lineSegmentDistanceFromOrigin:(CLLocationCoordinate2D)origin onLineSegmentPointA:(CLLocationCoordinate2D)pointA pointB:(CLLocationCoordinate2D)pointB {
     
     CGPoint dAP = CGPointMake(origin.longitude - pointA.longitude, origin.latitude - pointA.latitude);
@@ -244,6 +297,7 @@ MKRoute *routeDetails;
     return sqrtf(dx * dx + dy * dy);
     
 }
+ */
 
 - (void)didReceiveMemoryWarning
 {
