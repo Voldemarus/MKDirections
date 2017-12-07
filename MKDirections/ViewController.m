@@ -155,13 +155,25 @@ MKRoute *routeDetails;
     CLLocationCoordinate2D *routeCoordinates = malloc(pointCount * sizeof(CLLocationCoordinate2D));
     
     for (int i = 0 ; i < arrayStep.count ; i ++) {
-        MKRouteStep *step = arrayStep[i];
-        routeCoordinates[i] = step.polyline.coordinate;
+		MKPolyline *step = arrayStep[i];
+		NSInteger pCount = step.pointCount;	// get aount of points in segment
+		CLLocationCoordinate2D *coords = malloc(sizeof(CLLocationCoordinate2D) * pCount);
+		[step getCoordinates:coords range:NSMakeRange(0, pCount)];
+		routeCoordinates[i] = coords[0];
+		if (pointCount > 0 && i == arrayStep.count - 1) {
+			// add last point from the last segment
+			routeCoordinates[i+1] = coords[pointCount - 1];
+		}
+		
+		if (coords) free(coords);
+	
+//        MKRouteStep *step = arrayStep[i];
+//        routeCoordinates[i] = step.polyline.coordinate;
     }
     
     //Determine Minimum Distance and GuidancePoints from
  
-    double MinDistanceFromGuidanceInKM;
+    double MinDistanceFromGuidanceInKM = 10000.0;
     CLLocationCoordinate2D prevPoint            = CLLocationCoordinate2DMake(0, 0);
     CLLocationCoordinate2D pointWithMinDistance = CLLocationCoordinate2DMake(0, 0);
     CLLocationCoordinate2D nextPoint            = CLLocationCoordinate2DMake(0, 0);
@@ -169,8 +181,7 @@ MKRoute *routeDetails;
     MKAnnotationView *ulv = [self.mapView viewForAnnotation:self.mapView.userLocation];
     
     int find = 0;
-    for (int c=0; c < pointCount; c++)
-    {
+    for (int c=0; c < pointCount; c++) {
         double newDistanceInKM = [self distanceBetweentwoPoints:ulv.annotation.coordinate.latitude longitude:ulv.annotation.coordinate.longitude Old:routeCoordinates[c].latitude longitude:routeCoordinates[c].longitude];
         
         if (newDistanceInKM < MinDistanceFromGuidanceInKM) {
@@ -217,12 +228,17 @@ MKRoute *routeDetails;
 	CLLocation *pointC = [[CLLocation alloc] initWithLatitude:endPoint.latitude longitude:endPoint.longitude];
 	
 	CLLocationDistance segmentLength = [pointC distanceFromLocation:pointB];
+	if (segmentLength < MIN_DISTANCE * 1000.0) {
+		// don't forget to convert it into kilometers
+		return [pointA distanceFromLocation:pointB] / 1000.0;
+	}
+	
 	double userFromStartLength = [pointA distanceFromLocation:pointB];
 	double userFromEndLength = [pointA distanceFromLocation:pointC];
 	
 	return [self distanceForTrinagleA:segmentLength
 									B:userFromStartLength
-								 andC:userFromEndLength];
+								 andC:userFromEndLength] / 1000.0;
 }
 
 
