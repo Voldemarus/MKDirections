@@ -155,10 +155,11 @@ MKRoute *routeDetails;
     CLLocationCoordinate2D *routeCoordinates = malloc(pointCount * sizeof(CLLocationCoordinate2D));
     
     for (int i = 0 ; i < arrayStep.count ; i ++) {
-		MKPolyline *step = arrayStep[i];
-		NSInteger pCount = step.pointCount;	// get aount of points in segment
+		MKRouteStep *step = arrayStep[i];
+		MKPolyline *stepPolyline = step.polyline;
+		NSInteger pCount = stepPolyline.pointCount;	// get aount of points in segment
 		CLLocationCoordinate2D *coords = malloc(sizeof(CLLocationCoordinate2D) * pCount);
-		[step getCoordinates:coords range:NSMakeRange(0, pCount)];
+		[stepPolyline getCoordinates:coords range:NSMakeRange(0, pCount)];
 		routeCoordinates[i] = coords[0];
 		if (pointCount > 0 && i == arrayStep.count - 1) {
 			// add last point from the last segment
@@ -195,7 +196,6 @@ MKRoute *routeDetails;
             nextPoint = routeCoordinates[MIN(c+1,pointCount-1)];
         }
     }
-    free(routeCoordinates);
 	
 	double distanceFromClosestRouteSegment = [self distanceOfUser:ulv.annotation.coordinate fromSegmentStart:prevPoint toSegmentEnd:pointWithMinDistance];
 	double distanceFromNextSegment = [self distanceOfUser:ulv.annotation.coordinate fromSegmentStart:pointWithMinDistance toSegmentEnd:nextPoint];
@@ -206,15 +206,9 @@ MKRoute *routeDetails;
 //        [self lineSegmentDistanceFromOrigin:ulv.annotation.coordinate onLineSegmentPointA:prevPoint pointB:pointWithMinDistance],
 //        [self lineSegmentDistanceFromOrigin:ulv.annotation.coordinate onLineSegmentPointA:pointWithMinDistance pointB:nextPoint]);
 	
-    if (MinDistanceFromGuidanceInKM > 1.2*MIN_DISTANCE) {
-     
-        return NO;
-    }
-    
-    else {
-        return YES;
-    }
-     
+	free(routeCoordinates);
+
+	return (MinDistanceFromGuidanceInKM <= 1.2*MIN_DISTANCE);
 }
 
 //
