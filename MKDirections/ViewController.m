@@ -151,7 +151,13 @@ MKRoute *routeDetails;
 {
     //Get Coordinates of points in MKPolyline
     NSUInteger pointCount = arrayStep.count;
-    
+	if (pointCount <= 0) {
+		//
+		// if no points is set to route, consider that we are on the right position.
+		//
+		return YES;
+	}
+	
     CLLocationCoordinate2D *routeCoordinates = malloc(pointCount * sizeof(CLLocationCoordinate2D));
     
     for (int i = 0 ; i < arrayStep.count ; i ++) {
